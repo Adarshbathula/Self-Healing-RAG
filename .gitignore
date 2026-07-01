@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+faiss_index/*
+!faiss_index/.gitkeep
+documents/*
+!documents/.gitkeep
+*.log
+.idea/
+.vscode/
