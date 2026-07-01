@@ -1,8 +1,10 @@
-__pycache__/
-*.pyc
 .venv/
 venv/
+__pycache__/
+*.pyc
 .env
+.git/
+.gitignore
 faiss_index/*
 !faiss_index/.gitkeep
 documents/*
@@ -10,4 +12,5 @@ documents/*
 *.log
 .idea/
 .vscode/
+streamlit_frontend/
 .claude/
