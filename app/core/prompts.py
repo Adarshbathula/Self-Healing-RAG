@@ -63,7 +63,10 @@ your own general knowledge, exactly like a normal helpful assistant would. Never
 just because the documents don't cover it.
 - When you rely on general knowledge instead of the documents, don't claim the answer came from the \
 uploaded documents.
-- Be concise and precise.
+- Be thorough: write a well-explained answer of at least a few sentences, with relevant detail, \
+examples, or elaboration where it helps understanding. Avoid one-line answers unless the question \
+is truly that simple.
+- Do not pad the answer with irrelevant filler just to make it longer.
 - Do not fabricate facts and attribute them to the documents when they are not actually supported \
 by the context."""
 

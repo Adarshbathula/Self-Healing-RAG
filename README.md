@@ -60,7 +60,7 @@ Docs at `http://localhost:8000/docs`.
 In a second terminal, start the Streamlit UI:
 
 ```bash
-streamlit run streamlit_app.py
+streamlit run streamlit_frontend/app.py
 ```
 
 UI at `http://localhost:8501`. Set `API_BASE_URL` if the API isn't on `http://localhost:8000`.
@@ -89,6 +89,56 @@ and adds it to the persisted FAISS index.
 ```json
 { "status": "ok", "vector_store_ready": true, "indexed_documents": 128 }
 ```
+
+## Deploying (Render + Streamlit Community Cloud)
+
+The backend (FastAPI + LangGraph) and frontend (Streamlit) deploy as two separate services.
+
+### 1. Backend on Render
+
+1. Push this repo to GitHub (already done if you're reading this from the repo).
+2. On [render.com](https://render.com) → **New +** → **Blueprint** → connect this GitHub repo. Render
+   will detect [render.yaml](render.yaml) and pre-fill the service (build command, start command,
+   health check, env var names).
+   - Prefer manual setup instead? **New +** → **Web Service**, runtime **Python 3**, build command
+     `pip install -r requirements.txt`, start command `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+3. In the service's **Environment** tab, set `GROQ_API_KEY` to your real key (never commit it — it's
+   the one value `render.yaml` marks `sync: false` so Render prompts you for it instead of reading
+   the repo). The other vars (`MODEL_NAME`, `EMBEDDING_MODEL`, chunk sizes, etc.) already come from
+   `render.yaml`.
+4. Deploy. First build takes 5-10 minutes — it installs `torch`/`sentence-transformers`/`faiss` and
+   downloads the embedding model on first startup.
+5. Once live, verify: `curl https://<your-service>.onrender.com/health`.
+
+**Persistence caveat:** without a mounted disk, anything written to the local filesystem (uploaded
+PDFs, the FAISS index) is lost on every restart/redeploy. `render.yaml` requests a 1 GB persistent
+disk at `storage/`, mapped via `FAISS_INDEX_PATH=storage/faiss_index` and
+`DOCUMENTS_DIR=storage/documents` — but **persistent disks require a paid plan** (`plan: starter` in
+the blueprint, ~$7/mo+the disk). If you deploy on the free plan, remove the `disk:` block from
+`render.yaml` and expect to re-upload your PDFs after the service sleeps/restarts.
+
+**Resource caveat:** the embedding model (`sentence-transformers` + `torch`) is memory-hungry. Render's
+free tier (512 MB RAM) may OOM or be very slow loading it — the `starter` plan or higher is recommended
+for reliable operation.
+
+### 2. Frontend on Streamlit Community Cloud
+
+The Streamlit app lives in its own directory ([streamlit_frontend/](streamlit_frontend/)) with its
+**own slim `requirements.txt`** (just `streamlit` + `requests`) — this matters because Streamlit
+Community Cloud installs whatever `requirements.txt` sits next to the entrypoint file, and you don't
+want it pulling in `torch`/`faiss`/`langchain` just to run the UI.
+
+1. Go to [share.streamlit.io](https://share.streamlit.io) → **New app** → pick this GitHub repo and
+   branch `main`.
+2. Set **Main file path** to `streamlit_frontend/app.py`.
+3. Open **Advanced settings** → **Secrets**, and add:
+   ```toml
+   API_BASE_URL = "https://<your-render-service>.onrender.com"
+   ```
+   (Streamlit Cloud exposes secrets.toml keys as environment variables too, which is what
+   `os.environ.get("API_BASE_URL")` in the app reads.)
+4. Deploy. The backend already sends permissive CORS headers (`allow_origins=["*"]` in
+   [main.py](main.py)), so the cross-origin call from `*.streamlit.app` to Render works out of the box.
 
 ## Betterment suggestions (beyond the base spec)
 

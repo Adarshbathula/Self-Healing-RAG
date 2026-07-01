@@ -13,7 +13,12 @@ logger = get_logger(__name__)
 @lru_cache
 def _get_answer_llm() -> ChatGroq:
     settings = get_settings()
-    return ChatGroq(model=settings.model_name, api_key=settings.groq_api_key, temperature=0.2)
+    return ChatGroq(
+        model=settings.model_name,
+        api_key=settings.groq_api_key,
+        temperature=0.2,
+        max_tokens=1024,
+    )
 
 
 def generate_answer(question: str, context: str) -> str:
