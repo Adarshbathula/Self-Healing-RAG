@@ -121,6 +121,35 @@ the blueprint, ~$7/mo+the disk). If you deploy on the free plan, remove the `dis
 free tier (512 MB RAM) may OOM or be very slow loading it — the `starter` plan or higher is recommended
 for reliable operation.
 
+### 1b. Backend on Hugging Face Spaces (free alternative to Render)
+
+Render's free tier has only 512 MB RAM (too little for `torch`/`sentence-transformers` reliably) and
+persistent disks require a paid plan. Hugging Face Spaces' free CPU tier gives 16 GB RAM, no card
+required, and supports Docker — a better fit for this app at zero cost.
+
+This repo ships a [Dockerfile](Dockerfile) (listens on port 7860, per HF's convention) and a dedicated
+`huggingface-space` branch whose `README.md` has the YAML frontmatter Spaces needs
+(`sdk: docker`, `app_port: 7860`) without cluttering the GitHub-facing README on `main`.
+
+1. On [huggingface.co](https://huggingface.co) → **New Space** → SDK: **Docker** → pick a name (e.g.
+   `self-healing-rag`) → visibility your choice.
+2. In the Space's **Settings → Repository secrets**, add `GROQ_API_KEY` with your real key.
+3. Locally, add the Space as a git remote and push the `huggingface-space` branch to its `main`:
+   ```bash
+   git remote add hf https://huggingface.co/spaces/<your-username>/self-healing-rag
+   git push hf huggingface-space:main
+   ```
+   (Hugging Face will ask you to log in — use a [HF access token](https://huggingface.co/settings/tokens)
+   as the password when prompted.)
+4. The Space builds the Docker image automatically (~5-10 min first time) and serves the API at
+   `https://<your-username>-self-healing-rag.hf.space`.
+5. Verify: `curl https://<your-username>-self-healing-rag.hf.space/health`.
+
+**Persistence caveat still applies**: HF Spaces' free tier storage is also ephemeral by default —
+uploaded PDFs and the FAISS index reset on a rebuild/restart unless you add persistent storage
+(paid, Settings → persistent storage). Whenever you update `main`, re-sync the frontmatter branch:
+`git checkout huggingface-space && git merge main && git push hf huggingface-space:main`.
+
 ### 2. Frontend on Streamlit Community Cloud
 
 The Streamlit app lives in its own directory ([streamlit_frontend/](streamlit_frontend/)) with its
