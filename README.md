@@ -1,3 +1,13 @@
+---
+title: Self Healing RAG
+emoji: 🩹
+colorFrom: purple
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Self-Healing RAG
 
 A production-ready Retrieval-Augmented Generation service orchestrated end-to-end by **LangGraph**.
