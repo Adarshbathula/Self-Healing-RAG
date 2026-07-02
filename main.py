@@ -4,8 +4,10 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.auth_routes import router as auth_router
 from app.api.routes import router
 from app.core.logging import configure_logging, get_logger
+from app.services.user_store import init_db
 from app.services.vector_store import get_vector_store_manager
 
 configure_logging()
@@ -15,6 +17,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting Self-Healing RAG service")
+    init_db()
     get_vector_store_manager()
     yield
     logger.info("Shutting down Self-Healing RAG service")
@@ -46,6 +49,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     )
 
 
+app.include_router(auth_router)
 app.include_router(router)
 
 

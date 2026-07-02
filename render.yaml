@@ -13,6 +13,8 @@ services:
         sync: false
       - key: MODEL_NAME
         value: llama-3.3-70b-versatile
+      - key: FAST_MODEL_NAME
+        value: llama-3.1-8b-instant
       - key: EMBEDDING_MODEL
         value: BAAI/bge-small-en-v1.5
       - key: FAISS_INDEX_PATH
@@ -27,6 +29,10 @@ services:
         value: "4"
       - key: MAX_RETRIES
         value: "3"
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: USERS_DB_PATH
+        value: storage/users.db
     disk:
       name: rag-storage
       mountPath: /opt/render/project/src/storage

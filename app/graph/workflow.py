@@ -16,24 +16,38 @@ from app.graph.state import GraphState
 logger = get_logger(__name__)
 
 
-def build_workflow():
-    graph = StateGraph(GraphState)
-
+def _add_retrieval_loop(graph: StateGraph, generate_target: str) -> None:
     graph.add_node("retrieve", retrieve_node)
     graph.add_node("grade_context", grade_context_node)
     graph.add_node("rewrite_query", rewrite_query_node)
-    graph.add_node("generate", generate_answer_node)
 
     graph.set_entry_point("retrieve")
     graph.add_edge("retrieve", "grade_context")
     graph.add_conditional_edges(
         "grade_context",
         route_after_grading,
-        {"generate": "generate", "rewrite": "rewrite_query"},
+        {"generate": generate_target, "rewrite": "rewrite_query"},
     )
     graph.add_edge("rewrite_query", "retrieve")
-    graph.add_edge("generate", END)
 
+
+def build_workflow():
+    """Full graph: retrieve -> grade -> (rewrite loop) -> generate -> END."""
+    graph = StateGraph(GraphState)
+    _add_retrieval_loop(graph, generate_target="generate")
+    graph.add_node("generate", generate_answer_node)
+    graph.add_edge("generate", END)
+    return graph.compile()
+
+
+def build_context_workflow():
+    """Retrieval-only graph: retrieve -> grade -> (rewrite loop) -> END.
+
+    Stops right before answer generation so the caller can stream the final
+    answer separately instead of waiting for the whole graph to finish.
+    """
+    graph = StateGraph(GraphState)
+    _add_retrieval_loop(graph, generate_target=END)
     return graph.compile()
 
 
@@ -43,11 +57,15 @@ def get_compiled_workflow():
     return build_workflow()
 
 
-async def run_workflow(question: str) -> GraphState:
-    settings = get_settings()
-    workflow = get_compiled_workflow()
+@lru_cache
+def get_compiled_context_workflow():
+    logger.info("Compiling context-only LangGraph workflow (for streaming answers)")
+    return build_context_workflow()
 
-    initial_state: GraphState = {
+
+def _build_initial_state(question: str) -> GraphState:
+    settings = get_settings()
+    return {
         "original_question": question,
         "rewritten_question": "",
         "active_question": question,
@@ -60,5 +78,13 @@ async def run_workflow(question: str) -> GraphState:
         "sources": [],
     }
 
-    final_state = await workflow.ainvoke(initial_state)
-    return final_state
+
+async def run_workflow(question: str) -> GraphState:
+    workflow = get_compiled_workflow()
+    return await workflow.ainvoke(_build_initial_state(question))
+
+
+async def prepare_context(question: str) -> GraphState:
+    """Runs the retrieve/grade/rewrite loop only, without generating an answer."""
+    workflow = get_compiled_context_workflow()
+    return await workflow.ainvoke(_build_initial_state(question))
