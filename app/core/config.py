@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     groq_api_key: str
     model_name: str = "llama-3.3-70b-versatile"
+    fast_model_name: str = "llama-3.1-8b-instant"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
     faiss_index_path: str = "faiss_index"
     documents_dir: str = "documents"
@@ -17,6 +18,11 @@ class Settings(BaseSettings):
     top_k: int = 4
     max_retries: int = 3
     log_level: str = "INFO"
+
+    jwt_secret_key: str
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 1440
+    users_db_path: str = "users.db"
 
     @property
     def faiss_index_dir(self) -> Path:

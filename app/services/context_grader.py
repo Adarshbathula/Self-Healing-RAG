@@ -20,7 +20,7 @@ class GradeResult(BaseModel):
 @lru_cache
 def _get_grader_llm() -> ChatGroq:
     settings = get_settings()
-    return ChatGroq(model=settings.model_name, api_key=settings.groq_api_key, temperature=0)
+    return ChatGroq(model=settings.fast_model_name, api_key=settings.groq_api_key, temperature=0)
 
 
 def grade_context(question: str, context: str) -> GradeResult:
