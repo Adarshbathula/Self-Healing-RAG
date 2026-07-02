@@ -14,6 +14,73 @@ EXAMPLE_QUESTIONS = [
     "What is Retrieval-Augmented Generation?",
 ]
 
+CUSTOM_CSS = """
+<style>
+#MainMenu, footer, header {visibility: hidden;}
+
+:root {
+    --teal-dark: #11998e;
+    --teal-light: #38ef7d;
+    --panel-dark: #1c1f2b;
+    --panel-border: #2a2e3f;
+}
+
+/* ---- Login / register split card ---- */
+.st-key-login_card {
+    max-width: 900px;
+    margin: 48px auto 0;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(17, 153, 142, 0.25);
+}
+.st-key-login_card [data-testid="stHorizontalBlock"] { gap: 0; }
+.st-key-login_card [data-testid="column"] { padding: 0 !important; }
+
+.login-left {
+    background: linear-gradient(135deg, var(--teal-dark), var(--teal-light));
+    color: white;
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 32px;
+}
+.login-left .brand {
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.85;
+    margin-bottom: 48px;
+}
+.login-left h1 { font-size: 30px; margin: 0 0 14px; font-weight: 700; }
+.login-left p { font-size: 14.5px; opacity: 0.92; max-width: 260px; line-height: 1.5; margin: 0; }
+
+.st-key-login_right_panel {
+    background: var(--panel-dark);
+    border-left: 1px solid var(--panel-border);
+    min-height: 520px;
+    padding: 48px 40px 32px;
+}
+
+/* ---- Account avatar dropdown (top right, Gmail-style) ---- */
+.st-key-account_menu button {
+    border-radius: 50% !important;
+    width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    background: linear-gradient(135deg, var(--teal-dark), var(--teal-light)) !important;
+    color: white !important;
+    font-weight: 700 !important;
+    border: none !important;
+    float: right;
+}
+</style>
+"""
+
+st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
 
 def get_health() -> dict | None:
     try:
@@ -97,43 +164,66 @@ if "pending_question" not in st.session_state:
 
 
 def render_login_gate() -> None:
-    st.markdown("## 🩹 Self-Healing RAG")
-    st.caption("Sign in to continue. The first account ever registered becomes an admin automatically.")
+    with st.container(key="login_card"):
+        left, right = st.columns([1, 1.3], gap="small")
 
-    login_tab, register_tab = st.tabs(["Log in", "Register"])
-
-    with login_tab:
-        with st.form("login_form"):
-            email = st.text_input("Email")
-            password = st.text_input("Password", type="password")
-            submitted = st.form_submit_button("Log in", type="primary", use_container_width=True)
-        if submitted:
-            try:
-                result = login(email, password)
-                st.session_state.token = result["access_token"]
-                st.session_state.email = result["email"]
-                st.session_state.role = result["role"]
-                st.rerun()
-            except requests.RequestException as exc:
-                st.error(f"Login failed: {error_detail(exc)}")
-
-    with register_tab:
-        with st.form("register_form"):
-            email = st.text_input("Email", key="register_email")
-            password = st.text_input(
-                "Password", type="password", key="register_password", help="At least 8 characters"
+        with left:
+            st.markdown(
+                """
+                <div class="login-left">
+                    <div class="brand">🩹 Self-Healing RAG</div>
+                    <h1>Welcome Back!</h1>
+                    <p>Sign in to ask questions grounded in your documents — powered by a
+                    self-correcting retrieval pipeline that rewrites its own queries until it
+                    finds a good answer.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
-            submitted = st.form_submit_button("Create account", type="primary", use_container_width=True)
-        if submitted:
-            try:
-                result = register(email, password)
-                st.session_state.token = result["access_token"]
-                st.session_state.email = result["email"]
-                st.session_state.role = result["role"]
-                st.success(f"Account created as {result['role']}")
-                st.rerun()
-            except requests.RequestException as exc:
-                st.error(f"Registration failed: {error_detail(exc)}")
+
+        with right:
+            with st.container(key="login_right_panel"):
+                login_tab, register_tab = st.tabs(["Sign In", "Create Account"])
+
+                with login_tab:
+                    with st.form("login_form"):
+                        email = st.text_input("Email")
+                        password = st.text_input("Password", type="password")
+                        submitted = st.form_submit_button(
+                            "Sign In", type="primary", use_container_width=True
+                        )
+                    if submitted:
+                        try:
+                            result = login(email, password)
+                            st.session_state.token = result["access_token"]
+                            st.session_state.email = result["email"]
+                            st.session_state.role = result["role"]
+                            st.rerun()
+                        except requests.RequestException as exc:
+                            st.error(f"Login failed: {error_detail(exc)}")
+
+                with register_tab:
+                    with st.form("register_form"):
+                        email = st.text_input("Email", key="register_email")
+                        password = st.text_input(
+                            "Password",
+                            type="password",
+                            key="register_password",
+                            help="At least 8 characters",
+                        )
+                        submitted = st.form_submit_button(
+                            "Sign Up", type="primary", use_container_width=True
+                        )
+                    if submitted:
+                        try:
+                            result = register(email, password)
+                            st.session_state.token = result["access_token"]
+                            st.session_state.email = result["email"]
+                            st.session_state.role = result["role"]
+                            st.success(f"Account created as {result['role']}")
+                            st.rerun()
+                        except requests.RequestException as exc:
+                            st.error(f"Registration failed: {error_detail(exc)}")
 
 
 if not st.session_state.token:
@@ -142,18 +232,30 @@ if not st.session_state.token:
 
 health = get_health()
 is_admin = st.session_state.role == "admin"
+first_name = st.session_state.email.split("@")[0].replace(".", " ").title()
+
+top_left, top_right = st.columns([8, 1])
+with top_left:
+    st.markdown(f"### 👋 Welcome back, {first_name}!")
+    st.caption(
+        "Ask anything below — we'll search your documents first, and fall back to general "
+        "knowledge whenever they don't have the answer."
+    )
+with top_right:
+    with st.container(key="account_menu"):
+        with st.popover(st.session_state.email[0].upper()):
+            st.markdown(f"**{st.session_state.email}**")
+            st.caption(f"Role: {st.session_state.role}")
+            st.divider()
+            if st.button("Sign out", use_container_width=True):
+                st.session_state.token = None
+                st.session_state.email = None
+                st.session_state.role = None
+                st.session_state.messages = []
+                st.rerun()
 
 with st.sidebar:
     st.markdown("### 🩹 Self-Healing RAG")
-    st.caption(f"Signed in as **{st.session_state.email}** ({st.session_state.role})")
-
-    if st.button("Log out", use_container_width=True):
-        st.session_state.token = None
-        st.session_state.email = None
-        st.session_state.role = None
-        st.session_state.messages = []
-        st.rerun()
-
     st.divider()
     st.markdown("**Knowledge base**")
     if health is None:
