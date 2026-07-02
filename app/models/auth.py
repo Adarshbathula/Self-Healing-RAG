@@ -16,3 +16,13 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     email: str
     role: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8, description="At least 8 characters")
+
+
+class ChangeEmailRequest(BaseModel):
+    new_email: EmailStr
+    current_password: str

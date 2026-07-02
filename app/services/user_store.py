@@ -71,3 +71,46 @@ def authenticate_user(email: str, password: str) -> dict | None:
         return None
 
     return {"email": row["email"], "role": row["role"]}
+
+
+def change_password(email: str, current_password: str, new_password: str) -> None:
+    email = email.strip().lower()
+
+    with _lock, _connect() as conn:
+        row = conn.execute(
+            "SELECT hashed_password FROM users WHERE email = ?", (email,)
+        ).fetchone()
+        if row is None or not verify_password(current_password, row["hashed_password"]):
+            raise ValueError("Current password is incorrect")
+
+        conn.execute(
+            "UPDATE users SET hashed_password = ? WHERE email = ?",
+            (hash_password(new_password), email),
+        )
+        conn.commit()
+
+    logger.info("Password updated for %s", email)
+
+
+def change_email(current_email: str, new_email: str, current_password: str) -> str:
+    current_email = current_email.strip().lower()
+    new_email = new_email.strip().lower()
+
+    with _lock, _connect() as conn:
+        row = conn.execute(
+            "SELECT hashed_password FROM users WHERE email = ?", (current_email,)
+        ).fetchone()
+        if row is None or not verify_password(current_password, row["hashed_password"]):
+            raise ValueError("Current password is incorrect")
+
+        existing = conn.execute("SELECT 1 FROM users WHERE email = ?", (new_email,)).fetchone()
+        if existing:
+            raise ValueError("A user with this email already exists")
+
+        conn.execute(
+            "UPDATE users SET email = ? WHERE email = ?", (new_email, current_email)
+        )
+        conn.commit()
+
+    logger.info("Email updated: %s -> %s", current_email, new_email)
+    return new_email

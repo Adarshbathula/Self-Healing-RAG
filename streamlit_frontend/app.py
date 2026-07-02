@@ -144,6 +144,28 @@ def ask_question_stream(question: str, meta_holder: dict):
             raise RuntimeError(event.get("detail", "Streaming failed"))
 
 
+def change_password(current_password: str, new_password: str) -> dict:
+    response = requests.post(
+        f"{API_BASE_URL}/auth/change-password",
+        json={"current_password": current_password, "new_password": new_password},
+        headers=auth_headers(),
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def change_email(new_email: str, current_password: str) -> dict:
+    response = requests.post(
+        f"{API_BASE_URL}/auth/change-email",
+        json={"new_email": new_email, "current_password": current_password},
+        headers=auth_headers(),
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def error_detail(exc: requests.RequestException) -> str:
     if exc.response is not None:
         try:
@@ -246,6 +268,37 @@ with top_right:
         with st.popover(st.session_state.email[0].upper()):
             st.markdown(f"**{st.session_state.email}**")
             st.caption(f"Role: {st.session_state.role}")
+            st.divider()
+
+            with st.expander("Change password"):
+                with st.form("change_password_form"):
+                    current_pw = st.text_input("Current password", type="password")
+                    new_pw = st.text_input(
+                        "New password", type="password", help="At least 8 characters"
+                    )
+                    pw_submitted = st.form_submit_button("Update password", use_container_width=True)
+                if pw_submitted:
+                    try:
+                        change_password(current_pw, new_pw)
+                        st.success("Password updated")
+                    except requests.RequestException as exc:
+                        st.error(error_detail(exc))
+
+            with st.expander("Change email"):
+                with st.form("change_email_form"):
+                    new_email = st.text_input("New email")
+                    confirm_pw = st.text_input("Current password", type="password", key="email_confirm_pw")
+                    email_submitted = st.form_submit_button("Update email", use_container_width=True)
+                if email_submitted:
+                    try:
+                        result = change_email(new_email, confirm_pw)
+                        st.session_state.token = result["access_token"]
+                        st.session_state.email = result["email"]
+                        st.success("Email updated")
+                        st.rerun()
+                    except requests.RequestException as exc:
+                        st.error(error_detail(exc))
+
             st.divider()
             if st.button("Sign out", use_container_width=True):
                 st.session_state.token = None
